@@ -1,1 +1,2 @@
-# Empty file for now. Sets the module namespace
+# Sets the module namespace
+from maestro import Maestro
