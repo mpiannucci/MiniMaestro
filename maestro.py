@@ -25,11 +25,12 @@ class Maestro:
     _GO_HOME_CMD              = 0xA2
     _INIT_CMD                 = 0xAA
     
-    # Target Limit Definitions (Public)
+    # Motor Target Limit Definitions (Public)
     HOME_PULSE                = 6000
     MAX_FROM_HOME             = 2000
     MAX_FORWARD_SPEED         = HOME_PULSE + MAX_FROM_HOME
     MAX_REVERSE_SPEED         = HOME_PULSE - MAX_FROM_HOME
+    SERVO_RANGE               = MAX_FROM_HOME * 2
     
     def __init__(self, port="/dev/ttyACM0", baudrate=9600):
         """Class constructor block"""
@@ -82,15 +83,32 @@ class Maestro:
         channel -- The channel to control by target (integer)
         target  -- The integer value to trasmit as pulse width in units of quarter-microseconds
 
-         The target is a non-negative integer. If the channel is configured as a servo,
-         then the target represents the pulse width to transmit in units of quarter-microseconds.
-         A target value of 0 tells the Maestro to stop sending pulses to the servo. If the channel
-         is configured as a digital output, values less than 6000 tell the Maestro to drive the line
-         low, while values of 6000 or greater tell the Maestro to drive the line high.
+        The target is a non-negative integer. If the channel is configured as a servo,
+        then the target represents the pulse width to transmit in units of quarter-microseconds.
+        A target value of 0 tells the Maestro to stop sending pulses to the servo. If the channel
+        is configured as a digital output, values less than 6000 tell the Maestro to drive the line
+        low, while values of 6000 or greater tell the Maestro to drive the line high.
 
         """
         outStr = [self._SET_TARGET_CMD, channel, self.LowBits(target), self.HighBits(target)]
         self.write(*outStr)
+
+    def setTargetPercent(self, channel, percent):
+        """Sends a set target command to the controller when given a percentage instead of an 
+           explicit command
+
+        Input Arguments:
+        channel -- The channel to control by target (integer)
+        percent -- The integer value from -100 to 100 to transmit as a pulse width 
+
+        The target is a percentage value between 0 and 100. If the percentage is negative the 
+        corresponding motion will be in the negative direction (ccw). This function abstracts the
+        normal set target command. 
+
+        """
+        target = self.PercentToCommand(percent)
+        self.setTarget(channel, target)
+
 
     def setMultipleTargets(self, numTargets, channel1, target1, channel2,
             target2, channel3=None, target3=None, channel4=None, target4=None):
@@ -295,5 +313,5 @@ class Maestro:
         target  -- the equivalent value to send the servo a desired pulse-width
 
         """
-        shift = ((abs(percent)/100)*self.MAX_FROM_HOME)
+        shift = (percent/100)*self.MAX_FROM_HOME
         return self.MAX_FROM_HOME + shift
