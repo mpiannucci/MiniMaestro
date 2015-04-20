@@ -33,7 +33,14 @@ class Maestro:
     SERVO_RANGE               = MAX_FROM_HOME * 2
     
     def __init__(self, port="/dev/ttyACM0", baudrate=9600):
-        """Class constructor block"""
+        """Class constructor block
+        
+        @param port The serial port to communicate through (defualt: /dev/ttyACMO)     
+        @param baudrate The baudrate to open communications at (default: 9600)     
+
+        @return New Maestro object
+
+        """
         self._commandPort = serial.Serial()
         if self._commandPort.isOpen():
             self._commandPort.close()
@@ -57,6 +64,14 @@ class Maestro:
             print "Closing command port"
             self._commandPort.close()
 
+    def isOpen(self):
+        """ Check if the serial connection to the Maestro is Open
+
+        @return True if open, False otherwise
+
+        """  
+        return self._commandPort.isOpen() and self._commandPort.writable()
+
     def close(self):
         """Close the serial port"""
         if self._commandPort.isOpen():
@@ -68,6 +83,7 @@ class Maestro:
         Handles writing the commands to the Maestro device
 
         @param[in] data A list of commands to write to the device
+
         @return True if the write was successful, False otherwise
 
         """
@@ -81,7 +97,7 @@ class Maestro:
 
     def setTarget(self, channel, target):
         """Sends a set target command to the controller
-        The target is a non-negative integer. If the channel is configured as a servo,
+        @brief The target is a non-negative integer. If the channel is configured as a servo,
         then the target represents the pulse width to transmit in units of quarter-microseconds.
         A target value of 0 tells the Maestro to stop sending pulses to the servo. If the channel
         is configured as a digital output, values less than 6000 tell the Maestro to drive the line
@@ -97,7 +113,7 @@ class Maestro:
     def setTargetPercent(self, channel, percent):
         """Sends a set target command to the controller when given a percentage instead of an 
            explicit command
-        The target is a percentage value between 0 and 100. If the percentage is negative the 
+        @brief The target is a percentage value between 0 and 100. If the percentage is negative the 
         corresponding motion will be in the negative direction (ccw). This function abstracts the
         normal set target command. 
 
@@ -112,7 +128,7 @@ class Maestro:
     def setMultipleTargets(self, numTargets, channel1, target1, channel2,
             target2, channel3=None, target3=None, channel4=None, target4=None):
         """Set multiple servo targets at one time
-        This command simultaneously sets the targets for a contiguous block of channels.
+        @brief This command simultaneously sets the targets for a contiguous block of channels.
         The first byte specifies how many channels are in the contiguous block; this is the number
         of target values you will need to send. The second byte specifies the lowest channel
         number in the block. The subsequent bytes contain the target values for each of the channels,
@@ -136,7 +152,7 @@ class Maestro:
 
     def setSpeed(self, channel, speed):
         """Sends the speed command to the maestro channel
-        For a speed value of 140, if you send a Set Target command to adjust the
+        @brief For a speed value of 140, if you send a Set Target command to adjust the
         target from, say, 1000 microseconds to 1350 microseconds, it will take 100 ms to make that adjustment.
         A speed of 0 makes the speed unlimited, so that setting. the target will immediately
         affect the position. Note that the actual speed at which your servo moves is also limited
@@ -152,7 +168,7 @@ class Maestro:
 
     def setAcceleration(self, channel, acceleration):
         """Sets the acceleration limit of the servo channel
-        This command limits the acceleration of a servo channel’s output. The acceleration limit is a value
+        @brief This command limits the acceleration of a servo channel’s output. The acceleration limit is a value
         from 0 to 255 in units of (0.25 microseconds)/(10 ms)/(80 ms), except in special cases. A value of 0 corresponds
         to no acceleration limit. An acceleration limit causes the speed of a servo to slowly ramp up until it
         reaches the maximum speed, then to ramp down again as position approaches target, resulting in a relatively
@@ -171,7 +187,7 @@ class Maestro:
 
     def setPWM(self, onTime, period):
         """Sets the PWM to the specified onTime and period
-        This command sets the PWM output to the specified on time and period, in units of 1/48 microseconds.
+        @brief This command sets the PWM output to the specified on time and period, in units of 1/48 microseconds.
         A period of 4800, for example, will generate a frequency of 10 kHz. The resolution on these
         values depends on the period as shown in the table below:
 
@@ -195,7 +211,7 @@ class Maestro:
 
     def getPosition(self, channel):
         """Returns the position of the given channel
-        This command allows the device communicating with the Maestro to get the position value
+        @brief This command allows the device communicating with the Maestro to get the position value
         of a channel. If the specified channel is configured as a servo, this position value
         represents the current pulse width that the Maestro is transmitting on the channel,
         reflecting the effects of any previous commands, speed and acceleration limits, or scripts
@@ -221,7 +237,7 @@ class Maestro:
 
     def getMovingState(self):
         """Get the current motion state of the servo
-        This command is used to determine whether the servo outputs have reached their
+        @brief This command is used to determine whether the servo outputs have reached their
         targets or are still changing, limited by speed or acceleration settings.
         Using this command together with the Set Target command, you can initiate several
         servo movements and wait for all the movements to finish before moving on to the
@@ -236,7 +252,7 @@ class Maestro:
 
     def goHome(self):
         """Returns all servos back to home position
-        This command sends all servos and outputs to their home positions, just
+        @brief This command sends all servos and outputs to their home positions, just
         as if an error had occurred. For servos and outputs set to “Ignore”, the
         position will be unchanged.
 
@@ -286,19 +302,32 @@ class Maestro:
         return lowbits, highbits
 
     def LowBits(self, value):
-        """Returns the lower 7 bits to be passed as a control sequence (bits 0-6)"""
+        """Returns the lower 7 bits to be passed as a control sequence (bits 0-6)
+
+        @param value An integer to parse bits from
+
+        @return The lower 7 bits (bits 0-6)
+
+        """
         return value & 0x7F
 
     def HighBits(self, value):
-        """Returns the upper 7 bits to be passed as a control sequence (bits 7-13)"""
+        """Returns the upper 7 bits to be passed as a control sequence (bits 7-13)
+
+        @param value An integer to parse bits from 
+
+        @return The upper 7 bits (bits 7-13)
+
+        """
         return (value >> 7) & 0x7F
 
     def PercentToCommand(self, percent):
         """Process the percent value given for the servo control
 
         @param[in] percent An integer value between -100 and 100.
+
         @return the equivalent value to send the servo a desired pulse-width
 
         """
-        shift = (percent/100)*self.MAX_FROM_HOME
-        return self.MAX_FROM_HOME + shift
+        shift = int((percent/100.0)*self.MAX_FROM_HOME)
+        return self.HOME_PULSE + shift
