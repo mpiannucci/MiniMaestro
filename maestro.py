@@ -106,9 +106,11 @@ class Maestro:
         @param[in] channel The channel to control by target (integer)
         @param[in] target The integer value to trasmit as pulse width in units of quarter-microseconds
 
+        @return True if the target write was successful, False otherwise
+
         """
         outStr = [self._SET_TARGET_CMD, channel, self.LowBits(target), self.HighBits(target)]
-        self.write(*outStr)
+        return self.write(*outStr)
 
     def setTargetPercent(self, channel, percent):
         """Sends a set target command to the controller when given a percentage instead of an 
@@ -120,10 +122,11 @@ class Maestro:
         @param[in] channel The channel to control by target (integer)
         @param[in] percent The integer value from -100 to 100 to transmit as a pulse width
 
+        @return True if the target write was successful, False otherwise
+
         """
         target = self.PercentToCommand(percent)
-        self.setTarget(channel, target)
-
+        return self.setTarget(channel, target)
 
     def setMultipleTargets(self, numTargets, channel1, target1, channel2,
             target2, channel3=None, target3=None, channel4=None, target4=None):
@@ -138,9 +141,12 @@ class Maestro:
         @param[in] channel(i) The channel to control by target (integer)
         @param[in] target[i] The integer value to trasmit as pulse width in units of (0.25 microseconds)
 
+        @return True if all targets were written to successfully, False if any failed
+
         """
         if (numTargets < 2) or (numTargets > 4):
-            return "Invalid number of targets"
+            print "Invalid number of targets"
+            return False
         outStr = [self._SET_MULTIPLE_TARGET_CMD, numTargets]
         outStr.append(channel1, self.LowBits(target1), self.HighBits(target1))
         outStr.append(channel2, self.LowBits(target2), self.HighBits(target2))
@@ -148,7 +154,7 @@ class Maestro:
             outStr.append(channel3, self.LowBits(target3), self.HighBits(target3))
         if numTargets > 3:
             outStr.append(channel4, self.LowBits(target4), self.HighBits(target4))
-        self.write(*outStr)
+        return self.write(*outStr)
 
     def setSpeed(self, channel, speed):
         """Sends the speed command to the maestro channel
@@ -162,9 +168,11 @@ class Maestro:
         @param[in] channel The channel of which to set the speed
         @param[in] speed The speed limit of the rate of output value change in units of (0.25 microseconds)/(10 ms).
 
+        @return True if the speed was successfully set, False otherwise
+
         """
         outStr = [self._SET_SPEED_CMD, channel, self.LowBits(speed), self.HighBits(speed)]
-        self.write(*outStr)
+        return self.write(*outStr)
 
     def setAcceleration(self, channel, acceleration):
         """Sets the acceleration limit of the servo channel
@@ -181,9 +189,10 @@ class Maestro:
         @param[in] channel The channel of which to set the speed
         @param[in] acceleration The acceleration limit of the channels output in units of (0.25 microseconds)/(10 ms)/(80 ms)
 
+        @return True if the acceleration was set successfully, False otherwise
         """
         outStr = [self._SET_ACCELERATION_CMD, channel, self.LowBits(acceleration), self.HighBits(acceleration)]
-        self.write(*outStr)
+        return self.write(*outStr)
 
     def setPWM(self, onTime, period):
         """Sets the PWM to the specified onTime and period
@@ -205,9 +214,11 @@ class Maestro:
         @param[in] onTime On time value in units of 1/48 microseconds
         @param[in] period Period value in units of 1/48 microseconds
 
+        @return True if the PWM was set successfully, False otherwise
+
         """
         outStr = [self._SET_PWM_CMD, self.LowBits(onTime), self.HighBits(onTime), self.LowBits(period), self.HighBits(period)]
-        self.write(*outStr)
+        return self.write(*outStr)
 
     def getPosition(self, channel):
         """Returns the position of the given channel
@@ -227,8 +238,13 @@ class Maestro:
 
         @param[in] channel The channel of which to get the position
 
+        @return The current position. Read more in the brief. If the write failed, the function will return -1.
+
         """
-        self.write(self._GET_POSITION_CMD, channel)
+        status = self.write(self._GET_POSITION_CMD, channel)
+        if not status:
+            return -1
+
         # Get the return bytes
         lowbits = ord(self._commandPort.read(1))
         highbits = ord(self._commandPort.read(1))
@@ -243,10 +259,13 @@ class Maestro:
         servo movements and wait for all the movements to finish before moving on to the
         next step of your program.
 
-        @return 1 if moving, 0 if not in motion
+        @return 1 if moving, 0 if not in motion, -1 if the write failed
 
         """
-        self.write(self._GET_MOVING_STATE_CMD)
+        status = self.write(self._GET_MOVING_STATE_CMD)
+        if not status:
+            return -1
+
         # Get the return byte
         return ord(self._commandPort.read(1))
 
@@ -256,8 +275,10 @@ class Maestro:
         as if an error had occurred. For servos and outputs set to “Ignore”, the
         position will be unchanged.
 
+        @return True if successfully, False otherwise
+
         """
-        self.write(self._GO_HOME_CMD)
+        return self.write(self._GO_HOME_CMD)
 
     def getErrors(self):
         """Returns any errors that the Maestro has detected.
@@ -292,10 +313,13 @@ class Maestro:
                                                 instruction to be executed) to go out of bounds. This can happen if your program is not terminated by a quit,
                                                 return, or infinite loop.
 
-        @return The error code read from the servo
+        @return The error code read from the servo, or False if unsuccessful
 
         """
-        self.write(self._GET_ERRORS_CMD)
+        status = self.write(self._GET_ERRORS_CMD)
+        if not status:
+            return False
+
         # Get the response bytes
         lowbits = ord(self._commandPort.read(1))
         highbits = ord(self._commandPort.read(1))
